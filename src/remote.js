@@ -131,7 +131,8 @@ const defaults = {
   timeout: 0,
   trace: ['trace', 'warn', 'error'],
   clear: 1,
-  token: '',
+  authorization: '',
+  timestampFormatter: function () { return new Date().toString() }
 };
 
 const apply = function apply(logger, options) {
@@ -156,14 +157,22 @@ const apply = function apply(logger, options) {
     trace[key] = true;
   }
 
-  const push = (array, stack) => {
+  const push = (array, stack,  methodName, logLevel, loggerName) => {
     if (stack) {
       const lines = stack.split('\n');
       lines.splice(0, options.clear + 2);
       stack = `\n${lines.join('\n')}`;
     }
 
-    queue.push(`${format(array)}${stack}`);
+    queue.push(tryStringify({
+      timestamp: options.timestampFormatter(new Date()),
+      level: log,
+      methodName: methodName,
+      logger: loggerName,
+      log: `${format(array)}`,
+      args: array,
+      stacktrace: stack
+    }));
   };
 
   const send = () => {
@@ -179,8 +188,8 @@ const apply = function apply(logger, options) {
     xhr.open('POST', `${options.url}?r=${Math.random()}`, true);
     xhr.setRequestHeader('Content-Type', 'text/plain');
 
-    if (options.token) {
-      xhr.setRequestHeader('Authorization', options.token);
+    if (options.authorization) {
+      xhr.setRequestHeader('Authorization', options.authorization);
     }
 
     const cancel = () => {
@@ -225,7 +234,7 @@ const apply = function apply(logger, options) {
     return (...args) => {
       const stack = hasStack && methodName in trace ? stackTrace() : '';
 
-      push(args, stack);
+      push(args, stack, methodName, logLevel, loggerName);
       send();
 
       if (options.call) rawMethod(...args);
