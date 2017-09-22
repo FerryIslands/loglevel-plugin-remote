@@ -166,8 +166,7 @@ const apply = function apply(logger, options) {
 
     queue.push(tryStringify({
       timestamp: options.timestampFormatter(new Date()),
-      level: logLevel,
-      methodName: methodName,
+      level: methodName,
       logger: loggerName,
       log: `${format(array)}`,
       args: array,
