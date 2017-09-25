@@ -132,6 +132,7 @@ const defaults = {
   trace: ['trace', 'warn', 'error'],
   clear: 1,
   authorization: '',
+  maxQueueSize: 500,
   timestampFormatter: function () { return new Date().toString() }
 };
 
@@ -232,6 +233,10 @@ const apply = function apply(logger, options) {
 
     return (...args) => {
       const stack = hasStack && methodName in trace ? stackTrace() : '';
+
+      if (queue.length >= options.maxQueueSize) {
+        let trashMsg = queue.shift();
+      }
 
       push(args, stack, methodName, logLevel, loggerName);
       send();
