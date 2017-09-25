@@ -183,6 +183,7 @@ const apply = function apply(logger, options) {
     isSending = true;
     const msg = queue.shift();
     let timeout;
+    let sendInterval = 1;
 
     const xhr = new window.XMLHttpRequest();
     xhr.open('POST', `${options.url}?r=${Math.random()}`, true);
@@ -197,7 +198,7 @@ const apply = function apply(logger, options) {
       xhr.abort();
       queue.unshift(msg);
       isSending = false;
-      setTimeout(send, 0);
+      setTimeout(send, sendInterval);
       // }
     };
 
@@ -208,11 +209,15 @@ const apply = function apply(logger, options) {
 
       if (xhr.status !== 200) {
         queue.unshift(msg);
+        let doubleIt = sendInterval  * 2
+        sendInterval = doubleIt > 30000 ? 30000 : doubleIt
+      } else {
+        sendInterval = 1;
       }
 
       isSending = false;
       if (timeout) clearTimeout(timeout);
-      setTimeout(send, 0);
+      setTimeout(send, sendInterval);
     };
 
     if (hasTimeoutSupport) {
