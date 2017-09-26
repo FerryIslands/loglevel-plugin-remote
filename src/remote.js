@@ -116,6 +116,7 @@ const hasStack = !!stackTrace();
 const queue = [];
 let isAssigned = false;
 let isSending = false;
+let sendInterval = 1;
 
 let origin = '';
 if (window && window.location) {
@@ -132,6 +133,12 @@ const defaults = {
   trace: ['trace', 'warn', 'error'],
   clear: 1,
   authorization: '',
+  maxQueueSize: 500,
+  backoffStrategy: function (interval) {
+    let doubleIt = interval  * 2
+    return doubleIt > 30000 ? 30000 : doubleIt
+  },
+  consoleLogTrashedMsg: false,
   timestampFormatter: function () { return new Date().toString() }
 };
 
@@ -196,7 +203,7 @@ const apply = function apply(logger, options) {
       xhr.abort();
       queue.unshift(msg);
       isSending = false;
-      setTimeout(send, 0);
+      setTimeout(send, sendInterval);
       // }
     };
 
@@ -206,12 +213,19 @@ const apply = function apply(logger, options) {
       }
 
       if (xhr.status !== 200) {
-        queue.unshift(msg);
+        if ((queue.length < options.maxQueueSize) || (options.maxQueueSize === 0 && queue.length === 0)) {
+          queue.unshift(msg);
+        } else if(options.consoleLogTrashedMsg) {
+          console.log('Remote message trashed and not sent : ',msg)
+        }
+        sendInterval = options.backoffStrategy(sendInterval);
+      } else {
+        sendInterval = 1;
       }
 
       isSending = false;
       if (timeout) clearTimeout(timeout);
-      setTimeout(send, 0);
+      setTimeout(send, sendInterval);
     };
 
     if (hasTimeoutSupport) {
@@ -232,6 +246,13 @@ const apply = function apply(logger, options) {
 
     return (...args) => {
       const stack = hasStack && methodName in trace ? stackTrace() : '';
+
+      if (queue.length !== 0 && queue.length >= options.maxQueueSize) {
+        let trashMsg = queue.shift();
+        if(options.consoleLogTrashedMsg) {
+          console.log('Remote message trashed and not sent: ',trashMsg)
+        }
+      }
 
       push(args, stack, methodName, logLevel, loggerName);
       send();
