@@ -31,6 +31,13 @@ var defaults = {
   trace: ['trace', 'warn', 'error'],
   clear: 1,
   token: '',
+  maxQueueSize: 500,
+  backoffStrategy: function (interval) {
+    let doubleIt = interval  * 2
+    return doubleIt > 30000 ? 30000 : doubleIt
+  },
+  consoleLogTrashedMsg: false,
+  timestampFormatter: function () { return new Date().toString()
 }
 ```
 
@@ -40,6 +47,10 @@ var defaults = {
 - **trace** - lots of levels for which to add the stack trace
 - **clear** - the number of rows to clean stack trace
 - **token** - authorization token (EG: "Bearer e8da0826-d680-4f79-87a9-d39fb06647b3")
+- **maxQueueSize** - the number of items in queue before we are throwing away the oldest message in queue.
+- **backoffStrategy** - function that the current retry wait time on sending message and doubles that time.
+- **consoleLogTrashedMsg** - true if we would like to log out the thrown away messages to console log.
+- **timestampFormatter** - function to format dates that are sent to remote host.
 
 ## Base usage
 
